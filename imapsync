@@ -9305,7 +9305,7 @@ sub copy_message
 
 
 
-        if ( $new_id and $syncflagsaftercopy ) {
+        if ( defined $new_id and $syncflagsaftercopy ) {
                 sync_flags_after_copy( $mysync, $h1_fold, $h1_msg, $h1_flags, $h2_fold, $new_id, $permanentflags2 ) ;
         }
 
@@ -10190,6 +10190,20 @@ sub append_message_on_host2
                 $max_msg_size_in_bytes = max( $string_len, $max_msg_size_in_bytes ) ;
                 $new_id = $mysync->{imap2}->append_string( $h2_fold, ${ $string_ref }, $h1_flags, $h1_date ) ;
                 myprint( debugmemory( $mysync, " at A2" ) ) ;
+
+                # This is IMAPClient bug workaround.
+                # Should be removed when fixed.
+                if ( defined $new_id){
+                       my $data = join '', $mysync->{imap2}->Results;
+
+                       # look for something like return size or self if no size found:
+                       # <tag> OK [APPENDUID <uid> <size>] APPEND completed
+                       my $ret = $data =~ m#\s+(\d+)\s*\]\s+APPEND# ? $1 : undef;
+
+                       $new_id = $ret;
+                }
+                # End of workaround.
+
                 if ( ! defined $new_id){
                         my $subject = subject( ${ $string_ref } ) ;
                         my $error_imap = $mysync->{imap2}->LastError || q{} ;
